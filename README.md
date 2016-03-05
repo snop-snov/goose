@@ -1,6 +1,6 @@
-[![Documentation](https://godoc.org/github.com/CloudCom/goose?status.png)](http://godoc.org/github.com/CloudCom/goose)
-[![Build Status](https://travis-ci.org/CloudCom/goose.svg?branch=master)](https://travis-ci.org/CloudCom/goose)
-[![Coverage Status](https://coveralls.io/repos/CloudCom/goose/badge.svg?branch=master&service=github)](https://coveralls.io/github/CloudCom/goose?branch=master)
+[![Documentation](https://godoc.org/github.com/steinbacher/goose?status.png)](http://godoc.org/github.com/steinbacher/goose)
+[![Build Status](https://travis-ci.org/steinbacher/goose.svg?branch=master)](https://travis-ci.org/steinbacher/goose)
+[![Coverage Status](https://coveralls.io/repos/steinbacher/goose/badge.svg?branch=master&service=github)](https://coveralls.io/github/steinbacher/goose?branch=master)
 
 # goose
 
@@ -15,11 +15,11 @@ As such, until this notice goes away, vendoring is highly recommended.
 
 # Install
 
-    $ go get github.com/CloudCom/goose/cmd/goose
+    $ go get github.com/steinbacher/goose/cmd/goose
 
 This will install the `goose` binary to your `$GOPATH/bin` directory.
 
-You can also build goose into your own applications by importing `github.com/CloudCom/goose/lib/goose`. Documentation is available at [godoc.org](http://godoc.org/github.com/CloudCom/goose/lib/goose).
+You can also build goose into your own applications by importing `github.com/steinbacher/goose/lib/goose`. Documentation is available at [godoc.org](http://godoc.org/github.com/steinbacher/goose/lib/goose).
 
 NOTE: the API is still new, and may undergo some changes.
 
@@ -29,7 +29,7 @@ The default goose binary includes support for all available drivers. Sometimes t
 
 For example
 
-    $ go get -tags nosqlite3 github.com/CloudCom/goose/cmd/goose
+    $ go get -tags nosqlite3 github.com/steinbacher/goose/cmd/goose
 
 The available tags are:
 
@@ -270,7 +270,7 @@ These instructions assume that you're using [Keith Rarick's Heroku Go buildpack]
 // note: need at least one blank line after build constraint
 package main
 
-import _ "github.com/CloudCom/goose/cmd/goose"
+import _ "github.com/steinbacher/goose/cmd/goose"
 ```
 
 [Set up your Heroku database(s) as usual.](https://devcenter.heroku.com/articles/heroku-postgresql)
