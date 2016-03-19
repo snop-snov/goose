@@ -16,7 +16,7 @@ import (
 // a specific database driver
 type DBDriver struct {
 	Name    string
-	OpenStr string
+	DSN     string
 	Import  string
 	Dialect SqlDialect
 }
@@ -31,7 +31,7 @@ migrationsDir: $DB_MIGRATIONS_DIR
 driver: $DB_DRIVER
 import: $DB_DRIVER_IMPORT
 dialect: $DB_DIALECT
-open: $DB_DSN
+dsn: $DB_DSN
 `
 
 // findDBConf looks for a dbconf.yaml file starting at the given directory and
@@ -121,9 +121,9 @@ func NewDBConf(dbDir, env string) (*DBConf, error) {
 		drv = imprt[i+1:]
 	}
 
-	open, _ := confGet(f, env, "open")
+	dsn, _ := confGet(f, env, "dsn")
 
-	d := newDBDriver(drv, open)
+	d := newDBDriver(drv, dsn)
 
 	if imprt != "" {
 		d.Import = imprt
@@ -153,8 +153,8 @@ func NewDBConf(dbDir, env string) (*DBConf, error) {
 // Further customization may be done in NewDBConf
 func newDBDriver(name, open string) DBDriver {
 	d := DBDriver{
-		Name:    name,
-		OpenStr: open,
+		Name: name,
+		DSN:  open,
 	}
 
 	switch strings.ToLower(name) {
@@ -197,21 +197,21 @@ func (drv *DBDriver) IsValid() bool {
 func OpenDBFromDBConf(conf *DBConf) (*sql.DB, error) {
 	// we depend on time parsing, so make sure it's enabled with the mysql driver
 	if conf.Driver.Name == "mysql" {
-		i := strings.Index(conf.Driver.OpenStr, "?")
+		i := strings.Index(conf.Driver.DSN, "?")
 		if i == -1 {
-			i = len(conf.Driver.OpenStr)
-			conf.Driver.OpenStr = conf.Driver.OpenStr + "?"
+			i = len(conf.Driver.DSN)
+			conf.Driver.DSN = conf.Driver.DSN + "?"
 		}
 		i++
 
-		q, err := url.ParseQuery(conf.Driver.OpenStr[i:])
+		q, err := url.ParseQuery(conf.Driver.DSN[i:])
 		if err != nil {
 			return nil, err
 		}
 		q.Set("parseTime", "true")
 
-		conf.Driver.OpenStr = conf.Driver.OpenStr[:i] + q.Encode()
+		conf.Driver.DSN = conf.Driver.DSN[:i] + q.Encode()
 	}
 
-	return sql.Open(conf.Driver.Name, conf.Driver.OpenStr)
+	return sql.Open(conf.Driver.Name, conf.Driver.DSN)
 }

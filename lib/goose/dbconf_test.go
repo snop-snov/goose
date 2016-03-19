@@ -81,7 +81,7 @@ func TestNewDBConf(t *testing.T) {
 		[]byte(`
 myenv:
 	driver: mysql
-	open: foo
+	dsn: foo
 	migrationsDir: dbstuff
 `),
 		0700)
@@ -92,7 +92,7 @@ myenv:
 
 	assert.Equal(t, migrationsDir, dbconf.MigrationsDir)
 	assert.Equal(t, "mysql", dbconf.Driver.Name)
-	assert.Equal(t, "foo", dbconf.Driver.OpenStr)
+	assert.Equal(t, "foo", dbconf.Driver.DSN)
 }
 
 func TestNewDBConf_default(t *testing.T) {
@@ -116,7 +116,7 @@ func TestNewDBConf_default(t *testing.T) {
 	assert.Equal(t, "mysqlite3", dbconf.Driver.Name)
 	assert.Equal(t, "github.com/myfork/sqlite3", dbconf.Driver.Import)
 	assert.Equal(t, &Sqlite3Dialect{}, dbconf.Driver.Dialect)
-	assert.Equal(t, "foo", dbconf.Driver.OpenStr)
+	assert.Equal(t, "foo", dbconf.Driver.DSN)
 }
 
 func TestNewDBConf_driverImport(t *testing.T) {
@@ -127,7 +127,7 @@ func TestNewDBConf_driverImport(t *testing.T) {
 		[]byte(`
 myenv:
 	driver: github.com/myfork/mysql
-	open: foo
+	dsn: foo
 `),
 		0700)
 	require.NoError(t, err)
@@ -139,7 +139,7 @@ myenv:
 	assert.Equal(t, "mysql", dbconf.Driver.Name)
 	assert.Equal(t, "github.com/myfork/mysql", dbconf.Driver.Import)
 	assert.Equal(t, &MySqlDialect{}, dbconf.Driver.Dialect)
-	assert.Equal(t, "foo", dbconf.Driver.OpenStr)
+	assert.Equal(t, "foo", dbconf.Driver.DSN)
 }
 
 func TestNewDBConf_driverDefaults(t *testing.T) {
@@ -245,7 +245,7 @@ func TestDriverSetFromEnvironmentVariable(t *testing.T) {
 			"got %v want %v", got, want)
 	}
 
-	gotOpenString := dbconf.Driver.OpenStr
+	gotOpenString := dbconf.Driver.DSN
 	wantOpenString := databaseOpenStringVal
 
 	if gotOpenString != wantOpenString {

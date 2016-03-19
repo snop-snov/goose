@@ -212,10 +212,10 @@ A sample `dbconf.yml` looks like
 ```yml
 development:
     driver: postgres
-    open: user=liam dbname=tester sslmode=disable
+    dsn: user=liam dbname=tester sslmode=disable
 ```
 
-Here, `development` specifies the name of the environment, and the `driver` and `open` elements are passed directly to database/sql to access the specified database.
+Here, `development` specifies the name of the environment, and the `driver` and `dsn` elements are passed directly to database/sql to access the specified database.
 
 You may include as many environments as you like, and you can use the `-env` command line option to specify which one to use. goose defaults to using an environment called `development`.
 
@@ -223,7 +223,7 @@ The configuration may also be environment-less, with all fields at the top level
 
 ```yaml
 driver: postgres
-open: user=liam dbname=tester sslmode=disable
+dsn: user=liam dbname=tester sslmode=disable
 ```
 
 You can even use a mixture of both. If a field is not specified within an environment, goose will fall back to looking at the top level.
@@ -239,7 +239,7 @@ migrationsDir: $DB_MIGRATIONS_DIR
 driver: $DB_DRIVER
 import: $DB_DRIVER_IMPORT
 dialect: $DB_DIALECT
-open: $DB_DSN
+dsn: $DB_DSN
 ```
 
 ## Other Drivers
@@ -252,7 +252,7 @@ To run Go-based migrations with another driver, specify its import path and dial
 ```yml
 myenv:
     driver: custom
-    open: custom open string
+    dsn: custom open string
     import: github.com/custom/driver
     dialect: mysql
 ```
@@ -280,7 +280,7 @@ Then make use of environment variable expansion in your `dbconf.yml`:
 ```yml
 production:
     driver: postgres
-    open: $DATABASE_URL
+    dsn: $DATABASE_URL
 ```
 
 To run goose in production, use `heroku run`:
