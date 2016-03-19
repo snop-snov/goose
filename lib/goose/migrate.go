@@ -24,9 +24,15 @@ type Direction bool
 func (d Direction) String() string {
 	if d == DirectionUp {
 		return "up"
-	} else {
-		return "down"
 	}
+	return "down"
+}
+
+func (d Direction) constName() string {
+	if d == DirectionUp {
+		return "DirectionUp"
+	}
+	return "DirectionDown"
 }
 
 const (

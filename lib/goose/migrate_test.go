@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -14,12 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getSqlite3Driver(t *testing.T) DBDriver {
+func getSqlite3Driver(t *testing.T) (DBDriver, string) {
+	dbFile := filepath.Join(os.TempDir(), "goose.db")
 	return DBDriver{
 		Name:    "sqlite3",
+		Import:  "github.com/mattn/go-sqlite3",
 		Dialect: Sqlite3Dialect{},
-		OpenStr: ":memory:",
-	}
+		OpenStr: dbFile,
+	}, dbFile
 }
 
 func getMysqlDriver(t *testing.T) DBDriver {
@@ -29,6 +32,7 @@ func getMysqlDriver(t *testing.T) DBDriver {
 	}
 	return DBDriver{
 		Name:    "mysql",
+		Import:  "github.com/go-sql-driver/mysql",
 		Dialect: MySqlDialect{},
 		OpenStr: dsn,
 	}
@@ -41,6 +45,7 @@ func getPostgresDriver(t *testing.T) DBDriver {
 	}
 	return DBDriver{
 		Name:    "postgres",
+		Import:  "github.com/lib/pq",
 		Dialect: PostgresDialect{},
 		OpenStr: dsn,
 	}
@@ -115,12 +120,12 @@ func setupMigrationsDir(migrationMap map[string][2]string) (string, func()) {
 	os.MkdirAll(migrationsPath, 0700)
 
 	for name, migrations := range migrationMap {
-		migStr := `-- +goose Up
-` + migrations[0] + `
+		migStr := sqlMigrationStr(migrations[0], migrations[1])
+		if strings.HasSuffix(name, ".go") {
+			n := strings.Index(name, "_")
+			migStr = goMigrationStr(name[:n], migrations[0], migrations[1])
+		}
 
--- +goose Down
-` + migrations[1] + `
-`
 		if err := ioutil.WriteFile(filepath.Join(migrationsPath, name), []byte(migStr), 0600); err != nil {
 			panic(err)
 		}
@@ -129,18 +134,47 @@ func setupMigrationsDir(migrationMap map[string][2]string) (string, func()) {
 	return migrationsPath, func() { os.RemoveAll(td) }
 }
 
+func sqlMigrationStr(up, down string) string {
+	return `-- +goose Up
+` + up + `
+
+-- +goose Down
+` + down + `
+`
+}
+
+func goMigrationStr(name, up, down string) string {
+	return `package main
+
+import (
+	"database/sql"
+)
+
+// Up is executed when this migration is applied
+func Up_` + name + `(txn *sql.Tx) {
+	` + up + `
+}
+
+// Down is executed when this migration is rolled back
+func Down_` + name + `(txn *sql.Tx) {
+	` + down + `
+}
+`
+}
+
 func TestCollectMigrations(t *testing.T) {
 	md, mdCleanup := setupMigrationsDir(map[string][2]string{
 		"20010203040506_first.sql":  [2]string{"SELECT 1;", "SELECT 1;"},
 		"20010203040507_second.sql": [2]string{"SELECT 2;", "SELECT 2;"},
 		"20010203040508_third.sql":  [2]string{"SELECT 3;", "SELECT 3;"},
+		"20160318040509_fourth.go":  [2]string{`println("hi")`, `println("bye")`},
 	})
 	defer mdCleanup()
 
 	migs, err := CollectMigrations(md)
 	require.NoError(t, err)
 
-	assert.Len(t, migs, 3)
+	assert.Len(t, migs, 4)
 	assert.Contains(t, migs, &Migration{
 		Version:   20010203040506,
 		IsApplied: false,
@@ -156,6 +190,11 @@ func TestCollectMigrations(t *testing.T) {
 		IsApplied: false,
 		Source:    filepath.Join(md, "20010203040508_third.sql"),
 	})
+	assert.Contains(t, migs, &Migration{
+		Version:   20160318040509,
+		IsApplied: false,
+		Source:    filepath.Join(md, "20160318040509_fourth.go"),
+	})
 }
 
 func testRunMigrationsOnDb(t *testing.T, driver DBDriver) {
@@ -163,6 +202,7 @@ func testRunMigrationsOnDb(t *testing.T, driver DBDriver) {
 		"20010203040506_setup.sql": [2]string{"CREATE TABLE test(value VARCHAR(20));", "DROP TABLE test;"},
 		"20010203040507_one.sql":   [2]string{"INSERT INTO test(value) VALUES('one');", "DELETE FROM test WHERE value = 'one';"},
 		"20010203040508_two.sql":   [2]string{"INSERT INTO test(value) VALUES('two');", "DELETE FROM test WHERE value = 'two';"},
+		"20160318040509_fourth.go": [2]string{`println("hi")`, `println("bye")`},
 	})
 	defer mdCleanup()
 	conf := &DBConf{
@@ -176,7 +216,7 @@ func testRunMigrationsOnDb(t *testing.T, driver DBDriver) {
 	db.Exec("DROP TABLE goose_db_version")
 	db.Exec("DROP TABLE test")
 
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	rows, err := db.Query("SELECT value FROM test")
@@ -195,7 +235,9 @@ func testRunMigrationsOnDb(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb(t, config)
 }
 func TestRunMigrationsOnDb_mysql(t *testing.T) {
 	testRunMigrationsOnDb(t, getMysqlDriver(t))
@@ -212,6 +254,7 @@ func testRunMigrationsOnDb_missingMiddle(t *testing.T, driver DBDriver) {
 		"20010203040506_setup.sql": [2]string{"CREATE TABLE test(value VARCHAR(20));", "DROP TABLE test;"},
 		"20010203040507_one.sql":   [2]string{"INSERT INTO test(value) VALUES('one');", "DELETE FROM test WHERE value = 'one';"},
 		"20010203040508_two.sql":   [2]string{"INSERT INTO test(value) VALUES('two');", "DELETE FROM test WHERE value = 'two';"},
+		"20160318040509_fourth.go": [2]string{`println("hi")`, `println("bye")`},
 	})
 	defer mdCleanup()
 	conf := &DBConf{
@@ -229,7 +272,7 @@ func testRunMigrationsOnDb_missingMiddle(t *testing.T, driver DBDriver) {
 	err = os.Rename(filepath.Join(md, "20010203040507_one.sql"), filepath.Join(md, "20010203040507_one.sql_"))
 	require.NoError(t, err)
 
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	rows, err := db.Query("SELECT value FROM test")
@@ -250,7 +293,7 @@ func testRunMigrationsOnDb_missingMiddle(t *testing.T, driver DBDriver) {
 	err = os.Rename(filepath.Join(md, "20010203040507_one.sql_"), filepath.Join(md, "20010203040507_one.sql"))
 	require.NoError(t, err)
 
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	rows, err = db.Query("SELECT value FROM test")
@@ -269,7 +312,9 @@ func testRunMigrationsOnDb_missingMiddle(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_missingMiddle_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_missingMiddle(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_missingMiddle(t, config)
 }
 func TestRunMigrationsOnDb_missingMiddle_mysql(t *testing.T) {
 	testRunMigrationsOnDb_missingMiddle(t, getMysqlDriver(t))
@@ -286,6 +331,7 @@ func testRunMigrationsOnDb_down(t *testing.T, driver DBDriver) {
 		"20010203040506_setup.sql": [2]string{"CREATE TABLE test(value VARCHAR(20));", "DROP TABLE test;"},
 		"20010203040507_one.sql":   [2]string{"INSERT INTO test(value) VALUES('one');", "DELETE FROM test WHERE value = 'one';"},
 		"20010203040508_two.sql":   [2]string{"INSERT INTO test(value) VALUES('two');", "DELETE FROM test WHERE value = 'two';"},
+		"20160318040509_fourth.go": [2]string{`println("hi")`, `println("bye")`},
 	})
 	defer mdCleanup()
 	conf := &DBConf{
@@ -300,7 +346,7 @@ func testRunMigrationsOnDb_down(t *testing.T, driver DBDriver) {
 	db.Exec("DROP TABLE test")
 
 	// up
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	// down
@@ -322,7 +368,9 @@ func testRunMigrationsOnDb_down(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "one")
 }
 func TestRunMigrationsOnDb_down_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_down(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_down(t, config)
 }
 func TestRunMigrationsOnDb_down_mysql(t *testing.T) {
 	testRunMigrationsOnDb_down(t, getMysqlDriver(t))
@@ -339,6 +387,7 @@ func testRunMigrationsOnDb_upDownUp(t *testing.T, driver DBDriver) {
 		"20010203040506_setup.sql": [2]string{"CREATE TABLE test(value VARCHAR(20));", "DROP TABLE test;"},
 		"20010203040507_one.sql":   [2]string{"INSERT INTO test(value) VALUES('one');", "DELETE FROM test WHERE value = 'one';"},
 		"20010203040508_two.sql":   [2]string{"INSERT INTO test(value) VALUES('two');", "DELETE FROM test WHERE value = 'two';"},
+		"20160318040509_fourth.go": [2]string{`println("hi")`, `println("bye")`},
 	})
 	defer mdCleanup()
 	conf := &DBConf{
@@ -353,7 +402,7 @@ func testRunMigrationsOnDb_upDownUp(t *testing.T, driver DBDriver) {
 	db.Exec("DROP TABLE test")
 
 	// up
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	// down
@@ -364,7 +413,7 @@ func testRunMigrationsOnDb_upDownUp(t *testing.T, driver DBDriver) {
 	require.Error(t, err) // table won't exist
 
 	// up
-	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20010203040508, db)
+	err = RunMigrationsOnDb(conf, conf.MigrationsDir, 20160318040509, db)
 	require.NoError(t, err)
 
 	rows, err = db.Query("SELECT value FROM test")
@@ -383,7 +432,9 @@ func testRunMigrationsOnDb_upDownUp(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_upDownUp_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_upDownUp(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_upDownUp(t, config)
 }
 func TestRunMigrationsOnDb_upDownUp_mysql(t *testing.T) {
 	testRunMigrationsOnDb_upDownUp(t, getMysqlDriver(t))
