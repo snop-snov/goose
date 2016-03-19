@@ -16,7 +16,7 @@ type templateData struct {
 	Version    int64
 	Import     string
 	Conf       string // gob encoded DBConf
-	Direction  Direction
+	Direction  string
 	Func       string
 	InsertStmt string
 }
@@ -61,8 +61,8 @@ func runGoMigration(conf *DBConf, path string, version int64, direction Directio
 		Version:    version,
 		Import:     conf.Driver.Import,
 		Conf:       sb.String(),
-		Direction:  direction,
-		Func:       fmt.Sprintf("%v_%v", strings.ToTitle(direction.String()), version),
+		Direction:  direction.constName(),
+		Func:       fmt.Sprintf("%v_%v", strings.Title(direction.String()), version),
 		InsertStmt: conf.Driver.Dialect.insertVersionSql(),
 	}
 
