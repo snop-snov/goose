@@ -15,13 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getSqlite3Driver(t *testing.T) DBDriver {
+func getSqlite3Driver(t *testing.T) (DBDriver, string) {
+	dbFile := filepath.Join(os.TempDir(), "goose.db")
 	return DBDriver{
 		Name:    "sqlite3",
 		Import:  "github.com/mattn/go-sqlite3",
 		Dialect: Sqlite3Dialect{},
-		OpenStr: ":memory:",
-	}
+		OpenStr: dbFile,
+	}, dbFile
 }
 
 func getMysqlDriver(t *testing.T) DBDriver {
@@ -234,7 +235,9 @@ func testRunMigrationsOnDb(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb(t, config)
 }
 func TestRunMigrationsOnDb_mysql(t *testing.T) {
 	testRunMigrationsOnDb(t, getMysqlDriver(t))
@@ -309,7 +312,9 @@ func testRunMigrationsOnDb_missingMiddle(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_missingMiddle_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_missingMiddle(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_missingMiddle(t, config)
 }
 func TestRunMigrationsOnDb_missingMiddle_mysql(t *testing.T) {
 	testRunMigrationsOnDb_missingMiddle(t, getMysqlDriver(t))
@@ -363,7 +368,9 @@ func testRunMigrationsOnDb_down(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "one")
 }
 func TestRunMigrationsOnDb_down_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_down(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_down(t, config)
 }
 func TestRunMigrationsOnDb_down_mysql(t *testing.T) {
 	testRunMigrationsOnDb_down(t, getMysqlDriver(t))
@@ -425,7 +432,9 @@ func testRunMigrationsOnDb_upDownUp(t *testing.T, driver DBDriver) {
 	assert.Contains(t, values, "two")
 }
 func TestRunMigrationsOnDb_upDownUp_sqlite3(t *testing.T) {
-	testRunMigrationsOnDb_upDownUp(t, getSqlite3Driver(t))
+	config, dbFile := getSqlite3Driver(t)
+	defer os.Remove(dbFile)
+	testRunMigrationsOnDb_upDownUp(t, config)
 }
 func TestRunMigrationsOnDb_upDownUp_mysql(t *testing.T) {
 	testRunMigrationsOnDb_upDownUp(t, getMysqlDriver(t))
