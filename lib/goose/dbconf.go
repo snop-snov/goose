@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -121,7 +122,13 @@ func NewDBConf(dbDir, env string) (*DBConf, error) {
 		drv = imprt[i+1:]
 	}
 
-	dsn, _ := confGet(f, env, "dsn")
+	dsn, err := confGet(f, env, "dsn")
+	if _, ok := err.(*yaml.NodeNotFound); ok {
+		log.Println("WARNING: Database 'dsn' not specified. Please check ensure " +
+			"that you have a 'dsn' node set in your dbconf file. If you " +
+			"are not using a conf file please ensure that you have set " +
+			"the 'DB_DSN' environment variable.")
+	}
 
 	d := newDBDriver(drv, dsn)
 
