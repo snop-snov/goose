@@ -21,7 +21,7 @@ func getSqlite3Driver(t *testing.T) (DBDriver, string) {
 		Name:    "sqlite3",
 		Import:  "github.com/mattn/go-sqlite3",
 		Dialect: Sqlite3Dialect{},
-		OpenStr: dbFile,
+		DSN:     dbFile,
 	}, dbFile
 }
 
@@ -34,7 +34,7 @@ func getMysqlDriver(t *testing.T) DBDriver {
 		Name:    "mysql",
 		Import:  "github.com/go-sql-driver/mysql",
 		Dialect: MySqlDialect{},
-		OpenStr: dsn,
+		DSN:     dsn,
 	}
 }
 
@@ -47,7 +47,7 @@ func getPostgresDriver(t *testing.T) DBDriver {
 		Name:    "postgres",
 		Import:  "github.com/lib/pq",
 		Dialect: PostgresDialect{},
-		OpenStr: dsn,
+		DSN:     dsn,
 	}
 }
 
@@ -59,7 +59,7 @@ func getRedshiftDriver(t *testing.T) DBDriver {
 	return DBDriver{
 		Name:    "postgres",
 		Dialect: RedshiftDialect{},
-		OpenStr: dsn,
+		DSN:     dsn,
 	}
 }
 
