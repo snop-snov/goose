@@ -19,7 +19,7 @@ As such, until this notice goes away, vendoring is highly recommended.
 
 This will install the `goose` binary to your `$GOPATH/bin` directory.
 
-You can also build goose into your own applications by importing `github.com/steinbacher/goose/lib/goose`. Documentation is available at [godoc.org](http://godoc.org/github.com/steinbacher/goose/lib/goose).
+You can also build goose into your own applications by importing `github.com/steinbacher/goose`. Documentation is available at [godoc.org](http://godoc.org/github.com/steinbacher/goose).
 
 NOTE: the API is still new, and may undergo some changes.
 

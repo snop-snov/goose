@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/steinbacher/goose/lib/goose"
+	"github.com/steinbacher/goose"
 )
 
 // global options. available to any subcommands.
