@@ -151,12 +151,12 @@ import (
 )
 
 // Up is executed when this migration is applied
-func Up_` + name + `(txn *sql.Tx) {
+func Up_` + name + `(txn *sql.Tx, db *sql.DB) {
 	` + up + `
 }
 
 // Down is executed when this migration is rolled back
-func Down_` + name + `(txn *sql.Tx) {
+func Down_` + name + `(txn *sql.Tx, db *sql.DB) {
 	` + down + `
 }
 `

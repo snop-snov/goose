@@ -5,12 +5,12 @@ import (
 )
 
 // Up is executed when this migration is applied
-func Up_{{ . }}(txn *sql.Tx) {
+func Up_{{ . }}(txn *sql.Tx, db *sql.DB) {
 
 }
 
 // Down is executed when this migration is rolled back
-func Down_{{ . }}(txn *sql.Tx) {
+func Down_{{ . }}(txn *sql.Tx, db *sql.DB) {
 
 }
 {{/* vim: set ft=go.gotexttmpl: */}}
