@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/steinbacher/goose"
+	"github.com/snop-snov/goose"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

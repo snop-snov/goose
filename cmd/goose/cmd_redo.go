@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/steinbacher/goose"
+	"github.com/snop-snov/goose"
 )
 
 var redoCmd = &Command{
